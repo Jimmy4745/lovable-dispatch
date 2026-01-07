@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Load, Driver } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { LoadFormDialog } from './LoadFormDialog';
 import { format, parseISO } from 'date-fns';
 import {
@@ -18,9 +19,11 @@ import {
 interface LoadsTableProps {
   loads: Load[];
   drivers: Driver[];
-  onAddLoad: (load: Omit<Load, 'loadId' | 'createdAt'>) => void;
+  onAddLoad: (load: Omit<Load, 'createdAt'>) => void;
   onUpdateLoad: (loadId: string, updates: Partial<Load>) => void;
   onDeleteLoad: (loadId: string) => void;
+  loadIdExists: (loadId: string, excludeLoadId?: string) => boolean;
+  fullLoads: Load[];
 }
 
 export function LoadsTable({ 
@@ -28,14 +31,18 @@ export function LoadsTable({
   drivers, 
   onAddLoad, 
   onUpdateLoad, 
-  onDeleteLoad 
+  onDeleteLoad,
+  loadIdExists,
+  fullLoads,
 }: LoadsTableProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLoad, setEditingLoad] = useState<Load | null>(null);
   const [deleteLoadId, setDeleteLoadId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const getDriverName = (driverId: string) => {
-    return drivers.find((d) => d.driverId === driverId)?.driverName || 'Unknown';
+    const driver = drivers.find((d) => d.driverId === driverId);
+    return driver?.driverName || 'Unknown';
   };
 
   const handleEdit = (load: Load) => {
@@ -43,7 +50,7 @@ export function LoadsTable({
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = (loadData: Omit<Load, 'loadId' | 'createdAt'>) => {
+  const handleFormSubmit = (loadData: Omit<Load, 'createdAt'>) => {
     if (editingLoad) {
       onUpdateLoad(editingLoad.loadId, loadData);
     } else {
@@ -65,25 +72,44 @@ export function LoadsTable({
     }
   };
 
+  // Filter loads by search query
+  const filteredLoads = loads.filter((load) =>
+    load.loadId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    load.origin.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    load.destination.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Loads</h2>
           <p className="text-sm text-muted-foreground">
-            {loads.length} loads in selected period
+            {filteredLoads.length} loads in selected period
           </p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Add Load
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by Load ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-64"
+            />
+          </div>
+          <Button onClick={() => setIsFormOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add Load
+          </Button>
+        </div>
       </div>
 
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <table className="data-table">
           <thead>
             <tr>
+              <th>Load ID</th>
               <th>Pickup</th>
               <th>Delivery</th>
               <th>Origin</th>
@@ -96,20 +122,28 @@ export function LoadsTable({
             </tr>
           </thead>
           <tbody>
-            {loads.length === 0 ? (
+            {filteredLoads.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-8 text-muted-foreground">
-                  No loads in selected period
+                <td colSpan={10} className="text-center py-8 text-muted-foreground">
+                  {searchQuery ? 'No loads match your search' : 'No loads in selected period'}
                 </td>
               </tr>
             ) : (
-              loads.map((load) => {
+              filteredLoads.map((load) => {
                 const commission = load.loadType === 'FULL' 
                   ? load.rate * 0.01 
                   : load.rate * 0.02;
                 
                 return (
                   <tr key={load.loadId}>
+                    <td className="font-medium font-mono">
+                      {load.loadId}
+                      {load.parentLoadId && (
+                        <span className="text-xs text-muted-foreground block">
+                          → {load.parentLoadId}
+                        </span>
+                      )}
+                    </td>
                     <td className="font-medium">
                       {format(parseISO(load.pickupDate), 'MMM d')}
                     </td>
@@ -164,6 +198,8 @@ export function LoadsTable({
         onSubmit={handleFormSubmit}
         drivers={drivers}
         initialData={editingLoad}
+        loadIdExists={loadIdExists}
+        fullLoads={fullLoads}
       />
 
       <AlertDialog open={!!deleteLoadId} onOpenChange={() => setDeleteLoadId(null)}>

@@ -1,16 +1,16 @@
-import { Driver, Load, Bonus } from '@/types';
+import { Driver, Load, Bonus, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
 
 export const sampleDrivers: Driver[] = [
-  { driverId: 'd1', driverName: 'Alex Johnson', status: 'active', createdAt: '2024-01-01' },
-  { driverId: 'd2', driverName: 'Maria Garcia', status: 'active', createdAt: '2024-01-05' },
-  { driverId: 'd3', driverName: 'James Wilson', status: 'active', createdAt: '2024-01-10' },
-  { driverId: 'd4', driverName: 'Sarah Chen', status: 'active', createdAt: '2024-02-01' },
-  { driverId: 'd5', driverName: 'Michael Brown', status: 'inactive', createdAt: '2024-02-15' },
+  { driverId: 'd1', driverName: 'Alex Johnson', driverType: 'company_driver', status: 'active', createdAt: '2024-01-01' },
+  { driverId: 'd2', driverName: 'Maria Garcia', driverType: 'owner_operator', status: 'active', createdAt: '2024-01-05' },
+  { driverId: 'd3', driverName: 'James Wilson', driverType: 'company_driver', status: 'active', createdAt: '2024-01-10' },
+  { driverId: 'd4', driverName: 'Sarah Chen', driverType: 'owner_operator', status: 'active', createdAt: '2024-02-01' },
+  { driverId: 'd5', driverName: 'Michael Brown', driverType: 'company_driver', status: 'inactive', createdAt: '2024-02-15' },
 ];
 
 export const sampleLoads: Load[] = [
   {
-    loadId: 'l1',
+    loadId: 'L001',
     pickupDate: '2025-01-06',
     deliveryDate: '2025-01-07',
     origin: 'Los Angeles, CA',
@@ -21,18 +21,30 @@ export const sampleLoads: Load[] = [
     createdAt: '2025-01-06',
   },
   {
-    loadId: 'l2',
+    loadId: 'L002',
     pickupDate: '2025-01-06',
     deliveryDate: '2025-01-08',
     origin: 'Dallas, TX',
     destination: 'Houston, TX',
     rate: 2800,
-    loadType: 'PARTIAL',
+    loadType: 'FULL',
     driverId: 'd2',
     createdAt: '2025-01-06',
   },
   {
-    loadId: 'l3',
+    loadId: 'L002-P1',
+    pickupDate: '2025-01-06',
+    deliveryDate: '2025-01-08',
+    origin: 'Dallas, TX',
+    destination: 'Austin, TX',
+    rate: 1200,
+    loadType: 'PARTIAL',
+    driverId: 'd2',
+    parentLoadId: 'L002',
+    createdAt: '2025-01-06',
+  },
+  {
+    loadId: 'L003',
     pickupDate: '2025-01-07',
     deliveryDate: '2025-01-09',
     origin: 'Chicago, IL',
@@ -43,18 +55,18 @@ export const sampleLoads: Load[] = [
     createdAt: '2025-01-07',
   },
   {
-    loadId: 'l4',
+    loadId: 'L004',
     pickupDate: '2025-01-07',
     deliveryDate: '2025-01-08',
     origin: 'Miami, FL',
     destination: 'Orlando, FL',
-    rate: 1500,
-    loadType: 'PARTIAL',
+    rate: 3500,
+    loadType: 'FULL',
     driverId: 'd3',
     createdAt: '2025-01-07',
   },
   {
-    loadId: 'l5',
+    loadId: 'L005',
     pickupDate: '2025-01-08',
     deliveryDate: '2025-01-10',
     origin: 'Seattle, WA',
@@ -65,7 +77,7 @@ export const sampleLoads: Load[] = [
     createdAt: '2025-01-08',
   },
   {
-    loadId: 'l6',
+    loadId: 'L006',
     pickupDate: '2025-01-08',
     deliveryDate: '2025-01-09',
     origin: 'Denver, CO',
@@ -75,57 +87,13 @@ export const sampleLoads: Load[] = [
     driverId: 'd2',
     createdAt: '2025-01-08',
   },
-  {
-    loadId: 'l7',
-    pickupDate: '2025-01-09',
-    deliveryDate: '2025-01-11',
-    origin: 'Atlanta, GA',
-    destination: 'Nashville, TN',
-    rate: 2100,
-    loadType: 'PARTIAL',
-    driverId: 'd3',
-    createdAt: '2025-01-09',
-  },
 ];
 
-export const sampleBonuses: Bonus[] = [
-  {
-    bonusId: 'b1',
-    driverId: 'd1',
-    bonusType: 'automatic',
-    amount: 50,
-    week: '2025-01-06',
-    date: '2025-01-12',
-    note: 'Weekly performance bonus - $11,000+ gross',
-    createdAt: '2025-01-12',
-  },
-  {
-    bonusId: 'b2',
-    driverId: 'd2',
-    bonusType: 'manual',
-    amount: 100,
-    week: '2025-01-06',
-    date: '2025-01-10',
-    note: 'Outstanding customer feedback',
-    createdAt: '2025-01-10',
-  },
-  {
-    bonusId: 'b3',
-    driverId: 'd4',
-    bonusType: 'automatic',
-    amount: 30,
-    week: '2025-01-06',
-    date: '2025-01-12',
-    note: 'Weekly performance bonus - $10,000+ gross',
-    createdAt: '2025-01-12',
-  },
-];
+export const sampleBonuses: Bonus[] = [];
 
-export const bonusThresholds = [
-  { threshold: 10000, bonus: 30 },
-  { threshold: 11000, bonus: 50 },
-  { threshold: 12000, bonus: 70 },
-  { threshold: 13000, bonus: 90 },
-  { threshold: 14000, bonus: 110 },
-  { threshold: 15000, bonus: 150 },
-];
+// Re-export bonus thresholds for backward compatibility
+export const bonusThresholds = companyDriverBonusThresholds;
+
+export function getBonusThresholdsForDriverType(driverType: 'company_driver' | 'owner_operator') {
+  return driverType === 'owner_operator' ? ownerOperatorBonusThresholds : companyDriverBonusThresholds;
+}

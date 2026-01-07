@@ -27,6 +27,11 @@ const Index = () => {
     deleteLoad,
     addBonus,
     deleteBonus,
+    addDriver,
+    updateDriver,
+    deleteDriver,
+    loadIdExists,
+    getFullLoads,
   } = useDispatcherData();
 
   return (
@@ -38,6 +43,7 @@ const Index = () => {
         {activeTab === 'team' && (
           <TeamDashboard
             metrics={metrics}
+            driverPerformance={driverPerformance}
             selectedWeek={selectedWeek}
             onWeekChange={setSelectedWeek}
             customDateRange={customDateRange}
@@ -54,6 +60,8 @@ const Index = () => {
             onAddLoad={addLoad}
             onUpdateLoad={updateLoad}
             onDeleteLoad={deleteLoad}
+            loadIdExists={loadIdExists}
+            fullLoads={getFullLoads()}
           />
         )}
         
@@ -70,8 +78,12 @@ const Index = () => {
         {activeTab === 'drivers' && (
           <DriversPanel
             driverPerformance={driverPerformance}
+            allDrivers={drivers}
             selectedWeek={selectedWeek}
             onWeekChange={setSelectedWeek}
+            onAddDriver={addDriver}
+            onUpdateDriver={updateDriver}
+            onDeleteDriver={deleteDriver}
           />
         )}
       </main>
