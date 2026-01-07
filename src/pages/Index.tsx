@@ -1,12 +1,80 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { Header } from '@/components/Header';
+import { TabNavigation } from '@/components/TabNavigation';
+import { TeamDashboard } from '@/components/TeamDashboard';
+import { LoadsTable } from '@/components/LoadsTable';
+import { BonusesPanel } from '@/components/BonusesPanel';
+import { DriversPanel } from '@/components/DriversPanel';
+import { useDispatcherData } from '@/hooks/useDispatcherData';
+import { TabType } from '@/types';
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('team');
+  const {
+    drivers,
+    filteredLoads,
+    filteredBonuses,
+    metrics,
+    driverPerformance,
+    selectedWeek,
+    setSelectedWeek,
+    customDateRange,
+    setCustomDateRange,
+    useCustomRange,
+    setUseCustomRange,
+    addLoad,
+    updateLoad,
+    deleteLoad,
+    addBonus,
+    deleteBonus,
+  } = useDispatcherData();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      <main className="container mx-auto px-6 py-6">
+        {activeTab === 'team' && (
+          <TeamDashboard
+            metrics={metrics}
+            selectedWeek={selectedWeek}
+            onWeekChange={setSelectedWeek}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+            useCustomRange={useCustomRange}
+            onToggleCustomRange={setUseCustomRange}
+          />
+        )}
+        
+        {activeTab === 'loads' && (
+          <LoadsTable
+            loads={filteredLoads}
+            drivers={drivers}
+            onAddLoad={addLoad}
+            onUpdateLoad={updateLoad}
+            onDeleteLoad={deleteLoad}
+          />
+        )}
+        
+        {activeTab === 'bonuses' && (
+          <BonusesPanel
+            bonuses={filteredBonuses}
+            drivers={drivers}
+            driverPerformance={driverPerformance}
+            onAddBonus={addBonus}
+            onDeleteBonus={deleteBonus}
+          />
+        )}
+        
+        {activeTab === 'drivers' && (
+          <DriversPanel
+            driverPerformance={driverPerformance}
+            selectedWeek={selectedWeek}
+            onWeekChange={setSelectedWeek}
+          />
+        )}
+      </main>
     </div>
   );
 };
