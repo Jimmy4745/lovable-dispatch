@@ -16,13 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 interface LoadFormDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (load: Omit<Load, 'loadId' | 'createdAt'>) => void;
+  onSubmit: (load: Omit<Load, 'createdAt'>) => void;
   drivers: Driver[];
   initialData?: Load | null;
+  loadIdExists: (loadId: string, excludeLoadId?: string) => boolean;
+  fullLoads: Load[];
 }
 
 export function LoadFormDialog({
@@ -31,8 +34,11 @@ export function LoadFormDialog({
   onSubmit,
   drivers,
   initialData,
+  loadIdExists,
+  fullLoads,
 }: LoadFormDialogProps) {
   const [formData, setFormData] = useState({
+    loadId: '',
     pickupDate: '',
     deliveryDate: '',
     origin: '',
@@ -40,11 +46,13 @@ export function LoadFormDialog({
     rate: '',
     loadType: 'FULL' as LoadType,
     driverId: '',
+    parentLoadId: '',
   });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
+        loadId: initialData.loadId,
         pickupDate: initialData.pickupDate,
         deliveryDate: initialData.deliveryDate,
         origin: initialData.origin,
@@ -52,9 +60,11 @@ export function LoadFormDialog({
         rate: initialData.rate.toString(),
         loadType: initialData.loadType,
         driverId: initialData.driverId,
+        parentLoadId: initialData.parentLoadId || '',
       });
     } else {
       setFormData({
+        loadId: '',
         pickupDate: '',
         deliveryDate: '',
         origin: '',
@@ -62,13 +72,34 @@ export function LoadFormDialog({
         rate: '',
         loadType: 'FULL',
         driverId: '',
+        parentLoadId: '',
       });
     }
   }, [initialData, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate load ID
+    if (!formData.loadId.trim()) {
+      toast.error('Load ID is required');
+      return;
+    }
+    
+    // Check for duplicate load ID
+    if (loadIdExists(formData.loadId, initialData?.loadId)) {
+      toast.error('Load ID already exists. Please use a unique ID.');
+      return;
+    }
+    
+    // Validate PARTIAL load must have parent
+    if (formData.loadType === 'PARTIAL' && !formData.parentLoadId) {
+      toast.error('PARTIAL loads must be linked to a FULL load');
+      return;
+    }
+    
     onSubmit({
+      loadId: formData.loadId.trim(),
       pickupDate: formData.pickupDate,
       deliveryDate: formData.deliveryDate,
       origin: formData.origin,
@@ -76,7 +107,9 @@ export function LoadFormDialog({
       rate: parseFloat(formData.rate),
       loadType: formData.loadType,
       driverId: formData.driverId,
+      parentLoadId: formData.loadType === 'PARTIAL' ? formData.parentLoadId : undefined,
     });
+    onClose();
   };
 
   const activeDrivers = drivers.filter((d) => d.status === 'active');
@@ -88,6 +121,17 @@ export function LoadFormDialog({
           <DialogTitle>{initialData ? 'Edit Load' : 'Add New Load'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="loadId">Load ID *</Label>
+            <Input
+              id="loadId"
+              placeholder="e.g., L007"
+              value={formData.loadId}
+              onChange={(e) => setFormData({ ...formData, loadId: e.target.value })}
+              required
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="pickupDate">Pickup Date</Label>
@@ -152,7 +196,7 @@ export function LoadFormDialog({
               <Label htmlFor="loadType">Load Type</Label>
               <Select
                 value={formData.loadType}
-                onValueChange={(value: LoadType) => setFormData({ ...formData, loadType: value })}
+                onValueChange={(value: LoadType) => setFormData({ ...formData, loadType: value, parentLoadId: '' })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -164,6 +208,30 @@ export function LoadFormDialog({
               </Select>
             </div>
           </div>
+
+          {formData.loadType === 'PARTIAL' && (
+            <div className="space-y-2">
+              <Label htmlFor="parentLoad">Parent FULL Load *</Label>
+              <Select
+                value={formData.parentLoadId}
+                onValueChange={(value) => setFormData({ ...formData, parentLoadId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select parent load" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fullLoads.map((load) => (
+                    <SelectItem key={load.loadId} value={load.loadId}>
+                      {load.loadId} - {load.origin} to {load.destination}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                PARTIAL loads must be linked to an existing FULL load
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="driver">Assigned Driver</Label>
@@ -177,7 +245,7 @@ export function LoadFormDialog({
               <SelectContent>
                 {activeDrivers.map((driver) => (
                   <SelectItem key={driver.driverId} value={driver.driverId}>
-                    {driver.driverName}
+                    {driver.driverName} ({driver.driverType === 'owner_operator' ? 'OO' : 'CD'})
                   </SelectItem>
                 ))}
               </SelectContent>

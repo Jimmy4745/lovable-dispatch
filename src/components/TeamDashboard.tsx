@@ -1,6 +1,7 @@
 import { MetricCard } from './MetricCard';
 import { WeekPicker } from './WeekPicker';
 import { DateRangePicker } from './DateRangePicker';
+import { DriverPerformanceChart } from './DriverPerformanceChart';
 import { WeekRange, DateRange } from '@/types';
 import { Package, TrendingUp, Gift, DollarSign, Truck, FileText } from 'lucide-react';
 
@@ -15,6 +16,12 @@ interface TeamDashboardProps {
     totalSalary: number;
     loadCount: number;
   };
+  driverPerformance: {
+    driverId: string;
+    driverName: string;
+    totalGross: number;
+    driverType: 'company_driver' | 'owner_operator';
+  }[];
   selectedWeek: WeekRange;
   onWeekChange: (week: WeekRange) => void;
   customDateRange: DateRange | null;
@@ -25,6 +32,7 @@ interface TeamDashboardProps {
 
 export function TeamDashboard({
   metrics,
+  driverPerformance,
   selectedWeek,
   onWeekChange,
   customDateRange,
@@ -57,6 +65,9 @@ export function TeamDashboard({
           />
         </div>
       </div>
+
+      {/* Driver Performance Chart */}
+      <DriverPerformanceChart driverPerformance={driverPerformance} />
 
       {/* Revenue Metrics */}
       <div>

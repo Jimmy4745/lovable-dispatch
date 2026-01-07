@@ -1,4 +1,5 @@
 export type LoadType = 'FULL' | 'PARTIAL';
+export type DriverType = 'company_driver' | 'owner_operator';
 
 export interface Load {
   loadId: string;
@@ -9,12 +10,14 @@ export interface Load {
   rate: number;
   loadType: LoadType;
   driverId: string;
+  parentLoadId?: string; // For PARTIAL loads linked to FULL loads
   createdAt: string;
 }
 
 export interface Driver {
   driverId: string;
   driverName: string;
+  driverType: DriverType;
   status: 'active' | 'inactive';
   createdAt: string;
 }
@@ -56,3 +59,19 @@ export interface DateRange {
 }
 
 export type TabType = 'team' | 'loads' | 'bonuses' | 'drivers';
+
+// Bonus thresholds by driver type
+export const ownerOperatorBonusThresholds = [
+  { threshold: 13000, bonus: 50 },
+  { threshold: 14000, bonus: 75 },
+  { threshold: 15000, bonus: 100 },
+];
+
+export const companyDriverBonusThresholds = [
+  { threshold: 10000, bonus: 30 },
+  { threshold: 11000, bonus: 50 },
+  { threshold: 12000, bonus: 70 },
+  { threshold: 13000, bonus: 90 },
+  { threshold: 14000, bonus: 110 },
+  { threshold: 15000, bonus: 150 },
+];

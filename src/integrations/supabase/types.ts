@@ -14,7 +14,136 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bonuses: {
+        Row: {
+          amount: number
+          bonus_type: Database["public"]["Enums"]["bonus_type"]
+          created_at: string
+          date: string
+          driver_id: string
+          id: string
+          note: string | null
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          amount: number
+          bonus_type: Database["public"]["Enums"]["bonus_type"]
+          created_at?: string
+          date: string
+          driver_id: string
+          id?: string
+          note?: string | null
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          amount?: number
+          bonus_type?: Database["public"]["Enums"]["bonus_type"]
+          created_at?: string
+          date?: string
+          driver_id?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonuses_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drivers: {
+        Row: {
+          created_at: string
+          driver_name: string
+          driver_type: Database["public"]["Enums"]["driver_type"]
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          driver_name: string
+          driver_type?: Database["public"]["Enums"]["driver_type"]
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          driver_name?: string
+          driver_type?: Database["public"]["Enums"]["driver_type"]
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      loads: {
+        Row: {
+          created_at: string
+          delivery_date: string
+          destination: string
+          driver_id: string | null
+          id: string
+          load_id: string
+          load_type: Database["public"]["Enums"]["load_type"]
+          origin: string
+          parent_load_id: string | null
+          pickup_date: string
+          rate: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_date: string
+          destination: string
+          driver_id?: string | null
+          id?: string
+          load_id: string
+          load_type: Database["public"]["Enums"]["load_type"]
+          origin: string
+          parent_load_id?: string | null
+          pickup_date: string
+          rate: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_date?: string
+          destination?: string
+          driver_id?: string | null
+          id?: string
+          load_id?: string
+          load_type?: Database["public"]["Enums"]["load_type"]
+          origin?: string
+          parent_load_id?: string | null
+          pickup_date?: string
+          rate?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loads_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +152,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      bonus_type: "automatic" | "manual"
+      driver_type: "company_driver" | "owner_operator"
+      load_type: "FULL" | "PARTIAL"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +281,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      bonus_type: ["automatic", "manual"],
+      driver_type: ["company_driver", "owner_operator"],
+      load_type: ["FULL", "PARTIAL"],
+    },
   },
 } as const

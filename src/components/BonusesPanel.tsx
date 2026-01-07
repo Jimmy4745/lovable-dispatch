@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Bonus, Driver } from '@/types';
+import { Bonus, Driver, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Zap, Hand } from 'lucide-react';
+import { Plus, Trash2, Zap, Hand, Truck, User } from 'lucide-react';
 import { BonusFormDialog } from './BonusFormDialog';
 import { format, parseISO } from 'date-fns';
-import { bonusThresholds } from '@/data/sampleData';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +21,7 @@ interface BonusesPanelProps {
   driverPerformance: {
     driverId: string;
     driverName: string;
+    driverType: 'company_driver' | 'owner_operator';
     totalGross: number;
     bonusAmount: number;
     bonusThreshold: number;
@@ -54,23 +54,47 @@ export function BonusesPanel({
   const automaticBonuses = bonuses.filter((b) => b.bonusType === 'automatic');
   const manualBonuses = bonuses.filter((b) => b.bonusType === 'manual');
 
+  const getFirstBonusThreshold = (driverType: 'company_driver' | 'owner_operator') => {
+    return driverType === 'owner_operator' 
+      ? ownerOperatorBonusThresholds[0].threshold 
+      : companyDriverBonusThresholds[0].threshold;
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Bonus Thresholds Reference */}
-      <div className="bg-card rounded-lg border border-border p-4">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <Zap className="w-4 h-4 text-warning" />
-          Weekly Bonus Thresholds
-        </h3>
-        <div className="flex flex-wrap gap-3">
-          {bonusThresholds.map((t) => (
-            <div key={t.threshold} className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">
-                ${t.threshold.toLocaleString()}+
-              </span>
-              <span className="font-medium text-revenue">${t.bonus}</span>
-            </div>
-          ))}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <Truck className="w-4 h-4 text-revenue" />
+            Company Driver Thresholds
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {companyDriverBonusThresholds.map((t) => (
+              <div key={t.threshold} className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  ${(t.threshold / 1000)}k+
+                </span>
+                <span className="font-medium text-revenue">${t.bonus}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <User className="w-4 h-4 text-partial" />
+            Owner Operator Thresholds
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {ownerOperatorBonusThresholds.map((t) => (
+              <div key={t.threshold} className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  ${(t.threshold / 1000)}k+
+                </span>
+                <span className="font-medium text-partial">${t.bonus}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -85,21 +109,28 @@ export function BonusesPanel({
               key={driver.driverId}
               className={`p-4 rounded-lg border ${
                 driver.bonusAmount > 0
-                  ? 'bg-revenue/5 border-revenue/20'
+                  ? driver.driverType === 'owner_operator'
+                    ? 'bg-partial/5 border-partial/20'
+                    : 'bg-revenue/5 border-revenue/20'
                   : 'bg-card border-border'
               }`}
             >
-              <p className="font-medium text-sm">{driver.driverName}</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-medium text-sm">{driver.driverName}</p>
+                <span className={driver.driverType === 'owner_operator' ? 'badge-partial' : 'badge-full'}>
+                  {driver.driverType === 'owner_operator' ? 'OO' : 'CD'}
+                </span>
+              </div>
               <p className="text-lg font-bold mt-1">
                 ${driver.totalGross.toLocaleString()}
               </p>
               {driver.bonusAmount > 0 ? (
-                <p className="text-sm text-revenue mt-1">
+                <p className={`text-sm mt-1 ${driver.driverType === 'owner_operator' ? 'text-partial' : 'text-revenue'}`}>
                   Eligible: ${driver.bonusAmount} bonus
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground mt-1">
-                  ${(10000 - driver.totalGross).toLocaleString()} to first bonus
+                  ${(getFirstBonusThreshold(driver.driverType) - driver.totalGross).toLocaleString()} to first bonus
                 </p>
               )}
             </div>
