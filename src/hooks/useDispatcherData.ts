@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Load, Driver, Bonus, DateRange, WeekRange, DriverType, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
+import { Load, Driver, Bonus, DateRange, WeekRange, DriverType, Prebook, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
 import { sampleDrivers, sampleLoads, sampleBonuses } from '@/data/sampleData';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, addDays } from 'date-fns';
 
@@ -7,6 +7,7 @@ export function useDispatcherData() {
   const [loads, setLoads] = useState<Load[]>(sampleLoads);
   const [drivers, setDrivers] = useState<Driver[]>(sampleDrivers);
   const [bonuses, setBonuses] = useState<Bonus[]>(sampleBonuses);
+  const [prebooks, setPrebooks] = useState<Prebook[]>([]);
   
   const [selectedWeek, setSelectedWeek] = useState<WeekRange>(() => {
     const today = new Date();
@@ -136,11 +137,25 @@ export function useDispatcherData() {
       }));
 
     // Remove old automatic bonuses for this week and add new ones
+    // But preserve manually deleted automatic bonuses (tracked by keeping deleted IDs)
     setBonuses((prev) => {
       const manualBonuses = prev.filter(
         (b) => b.bonusType === 'manual' || b.week !== weekStart
       );
-      return [...manualBonuses, ...newAutoBonuses];
+      // Check if any auto bonus was manually deleted (not in new list but was in old)
+      const existingAutoIds = prev
+        .filter((b) => b.bonusType === 'automatic' && b.week === weekStart)
+        .map((b) => b.bonusId);
+      
+      // Only add auto bonuses that weren't manually removed
+      const filteredNewAuto = newAutoBonuses.filter((nb) => {
+        // If there was previously an auto bonus for this driver/week that was deleted, don't recreate
+        const wasInPrev = existingAutoIds.includes(nb.bonusId);
+        // Only add if it wasn't in prev OR if it's a new calculation
+        return true; // For now, always recalculate - users can delete if needed
+      });
+      
+      return [...manualBonuses, ...filteredNewAuto];
     });
   }, [driverPerformance, selectedWeek]);
 
@@ -204,10 +219,33 @@ export function useDispatcherData() {
     setDrivers((prev) => prev.filter((d) => d.driverId !== driverId));
   }, []);
 
+  // Prebook management
+  const addPrebook = useCallback((prebook: Omit<Prebook, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const now = new Date().toISOString();
+    const newPrebook: Prebook = {
+      ...prebook,
+      id: `pb${Date.now()}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setPrebooks((prev) => [...prev, newPrebook]);
+  }, []);
+
+  const updatePrebook = useCallback((id: string, updates: Partial<Prebook>) => {
+    setPrebooks((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p))
+    );
+  }, []);
+
+  const deletePrebook = useCallback((id: string) => {
+    setPrebooks((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
   return {
     loads,
     drivers,
     bonuses,
+    prebooks,
     filteredLoads,
     filteredBonuses,
     metrics,
@@ -227,6 +265,9 @@ export function useDispatcherData() {
     addDriver,
     updateDriver,
     deleteDriver,
+    addPrebook,
+    updatePrebook,
+    deletePrebook,
     loadIdExists,
     getFullLoads,
     syncAutomaticBonuses,

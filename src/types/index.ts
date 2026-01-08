@@ -26,13 +26,25 @@ export type BonusType = 'automatic' | 'manual';
 
 export interface Bonus {
   bonusId: string;
-  driverId: string;
+  driverId?: string; // Optional - only for driver-specific bonuses
   bonusType: BonusType;
   amount: number;
   week: string;
   date: string;
   note: string;
   createdAt: string;
+}
+
+export type PrebookStatus = 'driver_needed' | 'has_driver' | 'lane';
+
+export interface Prebook {
+  id: string;
+  date: string;
+  loadNumber?: string;
+  status: PrebookStatus;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SalarySnapshot {
@@ -58,7 +70,7 @@ export interface DateRange {
   to: Date;
 }
 
-export type TabType = 'team' | 'loads' | 'bonuses' | 'drivers';
+export type TabType = 'team' | 'loads' | 'bonuses' | 'drivers' | 'prebooks';
 
 // Bonus thresholds by driver type
 export const ownerOperatorBonusThresholds = [

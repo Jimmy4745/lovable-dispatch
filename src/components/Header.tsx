@@ -1,10 +1,20 @@
-import { Truck, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { Truck, LogOut, Key, ChevronDown } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function Header() {
   const { signOut, user } = useAuth();
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
 
   return (
     <header className="border-b border-border bg-card">
@@ -22,19 +32,36 @@ export function Header() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             {user && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={signOut}
-                className="h-9 w-9"
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <span className="hidden sm:inline text-sm truncate max-w-[150px]">
+                      {user.email}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)}>
+                    <Key className="mr-2 h-4 w-4" />
+                    Change Password
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
       </div>
+
+      <ChangePasswordDialog 
+        open={isPasswordDialogOpen} 
+        onClose={() => setIsPasswordDialogOpen(false)} 
+      />
     </header>
   );
 }

@@ -1,5 +1,5 @@
 import { TabType } from '@/types';
-import { Users, Package, Gift, UserCheck } from 'lucide-react';
+import { Users, Package, Gift, UserCheck, CalendarDays } from 'lucide-react';
 
 interface TabNavigationProps {
   activeTab: TabType;
@@ -11,6 +11,7 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
   { id: 'loads', label: 'Loads', icon: <Package className="w-4 h-4" /> },
   { id: 'bonuses', label: 'Bonuses', icon: <Gift className="w-4 h-4" /> },
   { id: 'drivers', label: 'Drivers', icon: <UserCheck className="w-4 h-4" /> },
+  { id: 'prebooks', label: 'Prebooks', icon: <CalendarDays className="w-4 h-4" /> },
 ];
 
 export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -15,18 +15,17 @@ const authSchema = z.object({
 });
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (user) {
-      navigate('/', { replace: true });
-    }
-  }, [user, navigate]);
+  // Redirect if already logged in
+  if (!authLoading && user) {
+    navigate('/', { replace: true });
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,30 +39,16 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            toast.error('Invalid email or password');
-          } else {
-            toast.error(error.message);
-          }
+      const { error } = await signIn(email, password);
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password');
         } else {
-          toast.success('Welcome back!');
-          navigate('/', { replace: true });
+          toast.error(error.message);
         }
       } else {
-        const { error } = await signUp(email, password);
-        if (error) {
-          if (error.message.includes('already registered')) {
-            toast.error('This email is already registered. Please sign in.');
-          } else {
-            toast.error(error.message);
-          }
-        } else {
-          toast.success('Account created successfully!');
-          navigate('/', { replace: true });
-        }
+        toast.success('Welcome back!');
+        navigate('/', { replace: true });
       }
     } finally {
       setLoading(false);
@@ -81,7 +66,7 @@ export default function Auth() {
           </div>
           <CardTitle className="text-2xl">UG Transportation LLC</CardTitle>
           <CardDescription>
-            {isLogin ? 'Sign in to your account' : 'Create a new account'}
+            Sign in to access your dispatcher dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -112,22 +97,9 @@ export default function Auth() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isLogin ? 'Sign In' : 'Create Account'}
+              Sign In
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">
-              {isLogin ? "Don't have an account? " : 'Already have an account? '}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:underline font-medium"
-              disabled={loading}
-            >
-              {isLogin ? 'Sign up' : 'Sign in'}
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>

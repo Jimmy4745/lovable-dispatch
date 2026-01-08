@@ -144,6 +144,39 @@ export type Database = {
           },
         ]
       }
+      prebooks: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          load_number: string | null
+          note: string | null
+          status: Database["public"]["Enums"]["prebook_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          load_number?: string | null
+          note?: string | null
+          status?: Database["public"]["Enums"]["prebook_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          load_number?: string | null
+          note?: string | null
+          status?: Database["public"]["Enums"]["prebook_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -155,6 +188,7 @@ export type Database = {
       bonus_type: "automatic" | "manual"
       driver_type: "company_driver" | "owner_operator"
       load_type: "FULL" | "PARTIAL"
+      prebook_status: "driver_needed" | "has_driver" | "lane"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -285,6 +319,7 @@ export const Constants = {
       bonus_type: ["automatic", "manual"],
       driver_type: ["company_driver", "owner_operator"],
       load_type: ["FULL", "PARTIAL"],
+      prebook_status: ["driver_needed", "has_driver", "lane"],
     },
   },
 } as const
