@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Prebook, PrebookStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,11 @@ import {
   Trash2, 
   UserX, 
   UserCheck, 
-  Route 
+  Route,
+  Upload,
+  FileText,
+  X,
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -48,6 +52,9 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface PrebooksPanelProps {
   prebooks: Prebook[];
@@ -80,15 +87,20 @@ export function PrebooksPanel({
   onUpdatePrebook,
   onDeletePrebook,
 }: PrebooksPanelProps) {
+  const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPrebook, setEditingPrebook] = useState<Prebook | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     loadNumber: '',
     status: 'driver_needed' as PrebookStatus,
     note: '',
+    fileUrl: '',
+    fileName: '',
   });
 
   const monthStart = startOfMonth(currentMonth);
@@ -115,7 +127,7 @@ export function PrebooksPanel({
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
     setEditingPrebook(null);
-    setFormData({ loadNumber: '', status: 'driver_needed', note: '' });
+    setFormData({ loadNumber: '', status: 'driver_needed', note: '', fileUrl: '', fileName: '' });
     setIsFormOpen(true);
   };
 
@@ -125,8 +137,61 @@ export function PrebooksPanel({
       loadNumber: prebook.loadNumber || '',
       status: prebook.status,
       note: prebook.note || '',
+      fileUrl: prebook.fileUrl || '',
+      fileName: prebook.fileUrl ? prebook.fileUrl.split('/').pop() || '' : '',
     });
     setIsFormOpen(true);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('prebook-files')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('prebook-files')
+        .getPublicUrl(data.path);
+
+      setFormData(prev => ({
+        ...prev,
+        fileUrl: urlData.publicUrl,
+        fileName: file.name,
+      }));
+
+      toast.success('File uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveFile = async () => {
+    if (formData.fileUrl && user) {
+      try {
+        const path = formData.fileUrl.split('/prebook-files/')[1];
+        if (path) {
+          await supabase.storage.from('prebook-files').remove([path]);
+        }
+      } catch (error) {
+        console.error('Error removing file:', error);
+      }
+    }
+    setFormData(prev => ({ ...prev, fileUrl: '', fileName: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -137,6 +202,7 @@ export function PrebooksPanel({
         loadNumber: formData.loadNumber || undefined,
         status: formData.status,
         note: formData.note || undefined,
+        fileUrl: formData.fileUrl || undefined,
       });
     } else if (selectedDate) {
       onAddPrebook({
@@ -144,13 +210,14 @@ export function PrebooksPanel({
         loadNumber: formData.loadNumber || undefined,
         status: formData.status,
         note: formData.note || undefined,
+        fileUrl: formData.fileUrl || undefined,
       });
     }
     
     setIsFormOpen(false);
     setEditingPrebook(null);
     setSelectedDate(null);
-    setFormData({ loadNumber: '', status: 'driver_needed', note: '' });
+    setFormData({ loadNumber: '', status: 'driver_needed', note: '', fileUrl: '', fileName: '' });
   };
 
   const handleDeleteConfirm = () => {
@@ -249,9 +316,10 @@ export function PrebooksPanel({
                         className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs cursor-pointer border transition-colors hover:opacity-80 ${config.className}`}
                       >
                         {config.icon}
-                        <span className="truncate">
+                        <span className="truncate flex-1">
                           {prebook.loadNumber || prebook.note?.slice(0, 15) || 'Prebook'}
                         </span>
+                        {prebook.fileUrl && <FileText className="w-3 h-3 flex-shrink-0" />}
                       </div>
                     );
                   })}
@@ -269,7 +337,7 @@ export function PrebooksPanel({
 
       {/* Add/Edit Prebook Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
             <DialogTitle>
               {editingPrebook ? 'Edit Prebook' : `Add Prebook - ${selectedDate ? format(selectedDate, 'MMM d, yyyy') : ''}`}
@@ -317,6 +385,63 @@ export function PrebooksPanel({
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 rows={3}
               />
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label>Rate Confirmation (Optional)</Label>
+              {formData.fileUrl ? (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <a
+                    href={formData.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-sm text-primary hover:underline truncate"
+                  >
+                    {formData.fileName || 'View File'}
+                  </a>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleRemoveFile}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Rate Confirmation
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between pt-4">

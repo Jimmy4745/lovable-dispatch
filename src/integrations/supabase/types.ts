@@ -148,6 +148,7 @@ export type Database = {
         Row: {
           created_at: string
           date: string
+          file_url: string | null
           id: string
           load_number: string | null
           note: string | null
@@ -158,6 +159,7 @@ export type Database = {
         Insert: {
           created_at?: string
           date: string
+          file_url?: string | null
           id?: string
           load_number?: string | null
           note?: string | null
@@ -168,6 +170,7 @@ export type Database = {
         Update: {
           created_at?: string
           date?: string
+          file_url?: string | null
           id?: string
           load_number?: string | null
           note?: string | null
