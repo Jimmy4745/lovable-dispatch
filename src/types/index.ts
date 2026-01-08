@@ -43,6 +43,7 @@ export interface Prebook {
   loadNumber?: string;
   status: PrebookStatus;
   note?: string;
+  fileUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
