@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bonus, Driver } from '@/types';
+import { Bonus } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -10,29 +10,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface BonusFormDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (bonus: Omit<Bonus, 'bonusId' | 'createdAt'>) => void;
-  drivers: Driver[];
 }
 
 export function BonusFormDialog({
   open,
   onClose,
   onSubmit,
-  drivers,
 }: BonusFormDialogProps) {
   const [formData, setFormData] = useState({
-    driverId: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     note: '',
@@ -41,7 +31,6 @@ export function BonusFormDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      driverId: formData.driverId,
       bonusType: 'manual',
       amount: parseFloat(formData.amount),
       week: formData.date,
@@ -49,41 +38,19 @@ export function BonusFormDialog({
       note: formData.note,
     });
     setFormData({
-      driverId: '',
       amount: '',
       date: new Date().toISOString().split('T')[0],
       note: '',
     });
   };
 
-  const activeDrivers = drivers.filter((d) => d.status === 'active');
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>Add Manual Bonus</DialogTitle>
+          <DialogTitle>Add Company Bonus</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="driver">Driver</Label>
-            <Select
-              value={formData.driverId}
-              onValueChange={(value) => setFormData({ ...formData, driverId: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a driver" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeDrivers.map((driver) => (
-                  <SelectItem key={driver.driverId} value={driver.driverId}>
-                    {driver.driverName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="amount">Amount ($)</Label>

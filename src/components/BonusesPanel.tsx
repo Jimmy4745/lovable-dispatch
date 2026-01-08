@@ -39,8 +39,10 @@ export function BonusesPanel({
 }: BonusesPanelProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteBonusId, setDeleteBonusId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<'manual' | 'automatic'>('manual');
 
-  const getDriverName = (driverId: string) => {
+  const getDriverName = (driverId?: string) => {
+    if (!driverId) return 'Company';
     return drivers.find((d) => d.driverId === driverId)?.driverName || 'Unknown';
   };
 
@@ -49,6 +51,11 @@ export function BonusesPanel({
       onDeleteBonus(deleteBonusId);
       setDeleteBonusId(null);
     }
+  };
+
+  const handleDeleteClick = (bonusId: string, type: 'manual' | 'automatic') => {
+    setDeleteBonusId(bonusId);
+    setDeleteType(type);
   };
 
   const automaticBonuses = bonuses.filter((b) => b.bonusType === 'automatic');
@@ -143,7 +150,7 @@ export function BonusesPanel({
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
             <Hand className="w-4 h-4" />
-            Manual Bonuses ({manualBonuses.length})
+            Company Bonuses ({manualBonuses.length})
           </h3>
           <Button onClick={() => setIsFormOpen(true)} size="sm" className="gap-2">
             <Plus className="w-4 h-4" />
@@ -156,7 +163,6 @@ export function BonusesPanel({
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Driver</th>
                 <th>Note</th>
                 <th className="text-right">Amount</th>
                 <th className="w-16"></th>
@@ -165,15 +171,14 @@ export function BonusesPanel({
             <tbody>
               {manualBonuses.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No manual bonuses in selected period
+                  <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                    No company bonuses in selected period
                   </td>
                 </tr>
               ) : (
                 manualBonuses.map((bonus) => (
                   <tr key={bonus.bonusId}>
                     <td>{format(parseISO(bonus.date), 'MMM d, yyyy')}</td>
-                    <td className="font-medium">{getDriverName(bonus.driverId)}</td>
                     <td className="text-muted-foreground">{bonus.note}</td>
                     <td className="text-right font-medium text-revenue">
                       ${bonus.amount.toLocaleString()}
@@ -183,7 +188,7 @@ export function BonusesPanel({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteBonusId(bonus.bonusId)}
+                        onClick={() => handleDeleteClick(bonus.bonusId, 'manual')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -210,12 +215,13 @@ export function BonusesPanel({
                 <th>Driver</th>
                 <th>Reason</th>
                 <th className="text-right">Amount</th>
+                <th className="w-16"></th>
               </tr>
             </thead>
             <tbody>
               {automaticBonuses.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={5} className="text-center py-8 text-muted-foreground">
                     No automatic bonuses in selected period
                   </td>
                 </tr>
@@ -227,6 +233,17 @@ export function BonusesPanel({
                     <td className="text-muted-foreground">{bonus.note}</td>
                     <td className="text-right font-medium text-revenue">
                       ${bonus.amount.toLocaleString()}
+                    </td>
+                    <td>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteClick(bonus.bonusId, 'automatic')}
+                        title="Remove unapproved bonus"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -243,7 +260,6 @@ export function BonusesPanel({
           onAddBonus(bonus);
           setIsFormOpen(false);
         }}
-        drivers={drivers}
       />
 
       <AlertDialog open={!!deleteBonusId} onOpenChange={() => setDeleteBonusId(null)}>
@@ -251,7 +267,9 @@ export function BonusesPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Bonus</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this bonus? This will affect salary calculations.
+              {deleteType === 'automatic' 
+                ? 'Are you sure you want to remove this automatic bonus? This is typically done when the bonus was not approved by your manager.'
+                : 'Are you sure you want to delete this bonus? This will affect salary calculations.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

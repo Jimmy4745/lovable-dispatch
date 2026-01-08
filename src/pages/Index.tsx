@@ -5,6 +5,7 @@ import { TeamDashboard } from '@/components/TeamDashboard';
 import { LoadsTable } from '@/components/LoadsTable';
 import { BonusesPanel } from '@/components/BonusesPanel';
 import { DriversPanel } from '@/components/DriversPanel';
+import { PrebooksPanel } from '@/components/PrebooksPanel';
 import { useDispatcherData } from '@/hooks/useDispatcherData';
 import { TabType } from '@/types';
 
@@ -14,6 +15,7 @@ const Index = () => {
     drivers,
     filteredLoads,
     filteredBonuses,
+    prebooks,
     metrics,
     driverPerformance,
     selectedWeek,
@@ -30,6 +32,9 @@ const Index = () => {
     addDriver,
     updateDriver,
     deleteDriver,
+    addPrebook,
+    updatePrebook,
+    deletePrebook,
     loadIdExists,
     getFullLoads,
   } = useDispatcherData();
@@ -84,6 +89,15 @@ const Index = () => {
             onAddDriver={addDriver}
             onUpdateDriver={updateDriver}
             onDeleteDriver={deleteDriver}
+          />
+        )}
+
+        {activeTab === 'prebooks' && (
+          <PrebooksPanel
+            prebooks={prebooks}
+            onAddPrebook={addPrebook}
+            onUpdatePrebook={updatePrebook}
+            onDeletePrebook={deletePrebook}
           />
         )}
       </main>
