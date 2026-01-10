@@ -13,7 +13,7 @@ export function WeekPicker({ selectedWeek, onWeekChange }: WeekPickerProps) {
     const newStart = direction === 'prev' 
       ? subWeeks(selectedWeek.start, 1)
       : addWeeks(selectedWeek.start, 1);
-    const newEnd = addDays(newStart, 6);
+    const newEnd = addDays(newStart, 7);
     
     onWeekChange({
       start: newStart,
@@ -25,7 +25,7 @@ export function WeekPicker({ selectedWeek, onWeekChange }: WeekPickerProps) {
   const goToCurrentWeek = () => {
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const weekEnd = addDays(weekStart, 6);
+    const weekEnd = addDays(weekStart, 7);
     onWeekChange({
       start: weekStart,
       end: weekEnd,

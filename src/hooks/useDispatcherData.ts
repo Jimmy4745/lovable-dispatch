@@ -16,7 +16,7 @@ export function useDispatcherData() {
   const [selectedWeek, setSelectedWeek] = useState<WeekRange>(() => {
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const weekEnd = addDays(weekStart, 6);
+    const weekEnd = addDays(weekStart, 7);
     return {
       start: weekStart,
       end: weekEnd,
@@ -112,21 +112,34 @@ export function useDispatcherData() {
   const filteredLoads = useMemo(() => {
     return loads.filter((load) => {
       const pickupDate = parseISO(load.pickupDate);
-      return isWithinInterval(pickupDate, { start: activePeriod.start, end: activePeriod.end });
+
+      if (useCustomRange && customDateRange) {
+        return isWithinInterval(pickupDate, { start: customDateRange.from, end: customDateRange.to });
+      }
+
+      // Week mode: Monday -> next Monday (end is exclusive)
+      return pickupDate >= selectedWeek.start && pickupDate < selectedWeek.end;
     });
-  }, [loads, activePeriod]);
+  }, [loads, useCustomRange, customDateRange, selectedWeek]);
 
   const filteredBonuses = useMemo(() => {
     return bonuses.filter((bonus) => {
       const bonusDate = parseISO(bonus.date);
-      return isWithinInterval(bonusDate, { start: activePeriod.start, end: activePeriod.end });
-    });
-  }, [bonuses, activePeriod]);
 
-  // Get the week range for a given date (Monday to Sunday)
+      if (useCustomRange && customDateRange) {
+        return isWithinInterval(bonusDate, { start: customDateRange.from, end: customDateRange.to });
+      }
+
+      // Week mode: Monday -> next Monday (end is exclusive)
+      return bonusDate >= selectedWeek.start && bonusDate < selectedWeek.end;
+    });
+  }, [bonuses, useCustomRange, customDateRange, selectedWeek]);
+
+  // Get the week range for a given date (Monday -> next Monday)
+  // NOTE: `end` is the next Monday and should be treated as an exclusive bound for pickup-date filtering.
   const getWeekRange = useCallback((date: Date) => {
     const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Monday
-    const weekEnd = addDays(weekStart, 6); // Sunday
+    const weekEnd = addDays(weekStart, 7); // next Monday
     return { start: weekStart, end: weekEnd };
   }, []);
 
@@ -146,16 +159,24 @@ export function useDispatcherData() {
     };
   }, []);
 
-  // Calculate driver performance with bonuses based on loads within the week (Monday-Sunday)
-  const calculateDriverPerformanceFromLoads = useCallback((currentLoads: Load[]) => {
-    const weekRange = getWeekRange(activePeriod.start);
-    
+  // Calculate driver performance with bonuses based on loads within the week (Monday -> next Monday)
+  // Weekly gross rule: count loads picked up within the week and delivered by next Monday.
+  const calculateDriverPerformanceFromLoads = useCallback((currentLoads: Load[], weekAnchor: Date) => {
+    const weekRange = getWeekRange(weekAnchor);
+
     return drivers.filter(d => d.status === 'active').map((driver) => {
       const driverLoads = currentLoads.filter((l) => {
+        if (l.driverId !== driver.driverId) return false;
+
         const pickupDate = parseISO(l.pickupDate);
-        return l.driverId === driver.driverId && 
-          isWithinInterval(pickupDate, { start: weekRange.start, end: weekRange.end });
+        const deliveryDate = parseISO(l.deliveryDate);
+
+        const pickupInWeek = pickupDate >= weekRange.start && pickupDate < weekRange.end;
+        const deliveredByNextMonday = deliveryDate <= weekRange.end; // include next Monday deliveries
+
+        return pickupInWeek && deliveredByNextMonday;
       });
+
       const totalGross = driverLoads.reduce((sum, l) => sum + l.rate, 0);
       const loadCount = driverLoads.length;
       
@@ -169,7 +190,7 @@ export function useDispatcherData() {
         bonusThreshold,
       };
     });
-  }, [drivers, activePeriod, calculateDriverBonus, getWeekRange]);
+  }, [drivers, calculateDriverBonus, getWeekRange]);
 
   const metrics = useMemo(() => {
     const fullLoadsGross = filteredLoads
@@ -201,8 +222,8 @@ export function useDispatcherData() {
   }, [filteredLoads, filteredBonuses]);
 
   const driverPerformance = useMemo(() => {
-    return calculateDriverPerformanceFromLoads(loads);
-  }, [loads, calculateDriverPerformanceFromLoads]);
+    return calculateDriverPerformanceFromLoads(loads, activePeriod.start);
+  }, [loads, activePeriod.start, calculateDriverPerformanceFromLoads]);
 
   // Sync automatic bonuses - now with immediate calculation
   const syncAutomaticBonuses = useCallback(async (updatedLoads?: Load[]) => {
@@ -210,10 +231,10 @@ export function useDispatcherData() {
 
     const currentLoads = updatedLoads || loads;
     const weekStart = format(selectedWeek.start, 'yyyy-MM-dd');
-    const today = format(new Date(), 'yyyy-MM-dd');
+    const bonusDate = weekStart;
     
-    // Calculate driver performance with the current/updated loads
-    const currentPerformance = calculateDriverPerformanceFromLoads(currentLoads);
+    // Calculate driver performance with the current/updated loads for the selected week
+    const currentPerformance = calculateDriverPerformanceFromLoads(currentLoads, selectedWeek.start);
     
     // Calculate what automatic bonuses should exist
     const newAutoBonuses = currentPerformance
@@ -223,7 +244,7 @@ export function useDispatcherData() {
         bonusType: 'automatic' as const,
         amount: driver.bonusAmount,
         week: weekStart,
-        date: today,
+        date: bonusDate,
         note: `Weekly bonus for $${driver.totalGross.toLocaleString()} gross (${driver.driverType === 'owner_operator' ? 'Owner Operator' : 'Company Driver'})`,
       }));
 
