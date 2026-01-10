@@ -20,7 +20,7 @@ export type Database = {
           bonus_type: Database["public"]["Enums"]["bonus_type"]
           created_at: string
           date: string
-          driver_id: string
+          driver_id: string | null
           id: string
           note: string | null
           user_id: string
@@ -31,7 +31,7 @@ export type Database = {
           bonus_type: Database["public"]["Enums"]["bonus_type"]
           created_at?: string
           date: string
-          driver_id: string
+          driver_id?: string | null
           id?: string
           note?: string | null
           user_id: string
@@ -42,7 +42,7 @@ export type Database = {
           bonus_type?: Database["public"]["Enums"]["bonus_type"]
           created_at?: string
           date?: string
-          driver_id?: string
+          driver_id?: string | null
           id?: string
           note?: string | null
           user_id?: string

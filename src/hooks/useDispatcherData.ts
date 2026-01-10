@@ -123,6 +123,13 @@ export function useDispatcherData() {
     });
   }, [bonuses, activePeriod]);
 
+  // Get the week range for a given date (Monday to Sunday)
+  const getWeekRange = useCallback((date: Date) => {
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Monday
+    const weekEnd = addDays(weekStart, 6); // Sunday
+    return { start: weekStart, end: weekEnd };
+  }, []);
+
   // Calculate bonuses for each driver based on their type
   const calculateDriverBonus = useCallback((totalGross: number, driverType: DriverType) => {
     const thresholds = driverType === 'owner_operator' 
@@ -139,13 +146,15 @@ export function useDispatcherData() {
     };
   }, []);
 
-  // Calculate driver performance with bonuses based on ALL loads for the period
+  // Calculate driver performance with bonuses based on loads within the week (Monday-Sunday)
   const calculateDriverPerformanceFromLoads = useCallback((currentLoads: Load[]) => {
+    const weekRange = getWeekRange(activePeriod.start);
+    
     return drivers.filter(d => d.status === 'active').map((driver) => {
       const driverLoads = currentLoads.filter((l) => {
         const pickupDate = parseISO(l.pickupDate);
         return l.driverId === driver.driverId && 
-          isWithinInterval(pickupDate, { start: activePeriod.start, end: activePeriod.end });
+          isWithinInterval(pickupDate, { start: weekRange.start, end: weekRange.end });
       });
       const totalGross = driverLoads.reduce((sum, l) => sum + l.rate, 0);
       const loadCount = driverLoads.length;
@@ -160,7 +169,7 @@ export function useDispatcherData() {
         bonusThreshold,
       };
     });
-  }, [drivers, activePeriod, calculateDriverBonus]);
+  }, [drivers, activePeriod, calculateDriverBonus, getWeekRange]);
 
   const metrics = useMemo(() => {
     const fullLoadsGross = filteredLoads
