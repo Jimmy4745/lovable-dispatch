@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Load, Driver, LoadType } from '@/types';
 import {
   Dialog,
@@ -10,12 +10,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface LoadFormDialogProps {
@@ -49,6 +64,21 @@ export function LoadFormDialog({
     parentLoadId: '',
   });
 
+  const [parentLoadOpen, setParentLoadOpen] = useState(false);
+  const [parentLoadSearch, setParentLoadSearch] = useState('');
+
+  // Filter full loads based on search
+  const filteredFullLoads = useMemo(() => {
+    if (!parentLoadSearch) return fullLoads;
+    const search = parentLoadSearch.toLowerCase();
+    return fullLoads.filter(
+      (load) =>
+        load.loadId.toLowerCase().includes(search) ||
+        load.origin.toLowerCase().includes(search) ||
+        load.destination.toLowerCase().includes(search)
+    );
+  }, [fullLoads, parentLoadSearch]);
+
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -75,6 +105,7 @@ export function LoadFormDialog({
         parentLoadId: '',
       });
     }
+    setParentLoadSearch('');
   }, [initialData, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -212,21 +243,64 @@ export function LoadFormDialog({
           {formData.loadType === 'PARTIAL' && (
             <div className="space-y-2">
               <Label htmlFor="parentLoad">Parent FULL Load *</Label>
-              <Select
-                value={formData.parentLoadId}
-                onValueChange={(value) => setFormData({ ...formData, parentLoadId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select parent load" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fullLoads.map((load) => (
-                    <SelectItem key={load.loadId} value={load.loadId}>
-                      {load.loadId} - {load.origin} to {load.destination}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={parentLoadOpen} onOpenChange={setParentLoadOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={parentLoadOpen}
+                    className="w-full justify-between"
+                  >
+                    {formData.parentLoadId
+                      ? (() => {
+                          const selected = fullLoads.find((l) => l.loadId === formData.parentLoadId);
+                          return selected
+                            ? `${selected.loadId} - ${selected.origin} to ${selected.destination}`
+                            : 'Select parent load';
+                        })()
+                      : 'Search and select parent load...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Search by load ID, origin, or destination..."
+                      value={parentLoadSearch}
+                      onValueChange={setParentLoadSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No loads found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredFullLoads.map((load) => (
+                          <CommandItem
+                            key={load.loadId}
+                            value={load.loadId}
+                            onSelect={() => {
+                              setFormData({ ...formData, parentLoadId: load.loadId });
+                              setParentLoadOpen(false);
+                              setParentLoadSearch('');
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                formData.parentLoadId === load.loadId ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{load.loadId}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {load.origin} → {load.destination}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <p className="text-xs text-muted-foreground">
                 PARTIAL loads must be linked to an existing FULL load
               </p>

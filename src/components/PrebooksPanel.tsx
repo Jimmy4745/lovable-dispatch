@@ -377,10 +377,10 @@ export function PrebooksPanel({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="note">Note (Optional)</Label>
+              <Label htmlFor="note">Note</Label>
               <Textarea
                 id="note"
-                placeholder="Additional details about this prebook..."
+                placeholder="Add notes for this day or prebook..."
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 rows={3}
