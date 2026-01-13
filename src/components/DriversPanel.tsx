@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { WeekPicker } from './WeekPicker';
-import { Driver, WeekRange, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
+import { WeeklyGrossTable } from './WeeklyGrossTable';
+import { Driver, Load, WeekRange, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
 import { TrendingUp, Award, AlertCircle, Plus, Pencil, Trash2, Truck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DriverFormDialog } from './DriverFormDialog';
@@ -20,6 +21,7 @@ interface DriversPanelProps {
     driverId: string;
     driverName: string;
     driverType: 'company_driver' | 'owner_operator';
+    truckNumber?: string;
     totalGross: number;
     loadCount: number;
     bonusAmount: number;
@@ -27,6 +29,7 @@ interface DriversPanelProps {
     status: 'active' | 'inactive';
   }[];
   allDrivers: Driver[];
+  allLoads: Load[];
   selectedWeek: WeekRange;
   onWeekChange: (week: WeekRange) => void;
   onAddDriver: (driver: Omit<Driver, 'driverId' | 'createdAt'>) => void;
@@ -37,6 +40,7 @@ interface DriversPanelProps {
 export function DriversPanel({
   driverPerformance,
   allDrivers,
+  allLoads,
   selectedWeek,
   onWeekChange,
   onAddDriver,
@@ -183,6 +187,16 @@ export function DriversPanel({
           </div>
         </div>
       )}
+
+      {/* Weekly Gross Table */}
+      <div className="space-y-4">
+        <h3 className="font-semibold">Weekly Gross by Day</h3>
+        <WeeklyGrossTable
+          drivers={allDrivers}
+          loads={allLoads}
+          selectedWeek={selectedWeek}
+        />
+      </div>
 
       {/* Driver Lists by Type */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

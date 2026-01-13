@@ -58,6 +58,36 @@ export type Database = {
           },
         ]
       }
+      calendar_notes: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          is_completed: boolean
+          note: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          is_completed?: boolean
+          note: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          is_completed?: boolean
+          note?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       drivers: {
         Row: {
           created_at: string
@@ -65,6 +95,7 @@ export type Database = {
           driver_type: Database["public"]["Enums"]["driver_type"]
           id: string
           status: string
+          truck_number: string | null
           updated_at: string
           user_id: string
         }
@@ -74,6 +105,7 @@ export type Database = {
           driver_type?: Database["public"]["Enums"]["driver_type"]
           id?: string
           status?: string
+          truck_number?: string | null
           updated_at?: string
           user_id: string
         }
@@ -83,6 +115,7 @@ export type Database = {
           driver_type?: Database["public"]["Enums"]["driver_type"]
           id?: string
           status?: string
+          truck_number?: string | null
           updated_at?: string
           user_id?: string
         }

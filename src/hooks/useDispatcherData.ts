@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Load, Driver, Bonus, DateRange, WeekRange, DriverType, Prebook, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
+import { Load, Driver, Bonus, DateRange, WeekRange, DriverType, Prebook, CalendarNote, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,7 @@ export function useDispatcherData() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [prebooks, setPrebooks] = useState<Prebook[]>([]);
+  const [calendarNotes, setCalendarNotes] = useState<CalendarNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [selectedWeek, setSelectedWeek] = useState<WeekRange>(() => {
@@ -34,11 +35,12 @@ export function useDispatcherData() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [loadsRes, driversRes, bonusesRes, prebooksRes] = await Promise.all([
+        const [loadsRes, driversRes, bonusesRes, prebooksRes, notesRes] = await Promise.all([
           supabase.from('loads').select('*').order('pickup_date', { ascending: false }),
           supabase.from('drivers').select('*').order('driver_name'),
           supabase.from('bonuses').select('*').order('date', { ascending: false }),
           supabase.from('prebooks').select('*').order('date'),
+          supabase.from('calendar_notes').select('*').order('date'),
         ]);
 
         if (loadsRes.data) {
@@ -61,6 +63,7 @@ export function useDispatcherData() {
             driverId: d.id,
             driverName: d.driver_name,
             driverType: d.driver_type,
+            truckNumber: d.truck_number || undefined,
             status: d.status as 'active' | 'inactive',
             createdAt: d.created_at,
           })));
@@ -89,6 +92,17 @@ export function useDispatcherData() {
             fileUrl: p.file_url || undefined,
             createdAt: p.created_at,
             updatedAt: p.updated_at,
+          })));
+        }
+
+        if (notesRes.data) {
+          setCalendarNotes(notesRes.data.map(n => ({
+            id: n.id,
+            date: n.date,
+            note: n.note,
+            isCompleted: n.is_completed,
+            createdAt: n.created_at,
+            updatedAt: n.updated_at,
           })));
         }
       } catch (error) {
@@ -510,6 +524,7 @@ export function useDispatcherData() {
         user_id: user.id,
         driver_name: driver.driverName,
         driver_type: driver.driverType,
+        truck_number: driver.truckNumber || null,
         status: driver.status,
       }).select().single();
 
@@ -520,6 +535,7 @@ export function useDispatcherData() {
           driverId: data.id,
           driverName: data.driver_name,
           driverType: data.driver_type,
+          truckNumber: data.truck_number || undefined,
           status: data.status as 'active' | 'inactive',
           createdAt: data.created_at,
         }]);
@@ -538,6 +554,7 @@ export function useDispatcherData() {
       const updateData: Record<string, unknown> = {};
       if (updates.driverName) updateData.driver_name = updates.driverName;
       if (updates.driverType) updateData.driver_type = updates.driverType;
+      if (updates.truckNumber !== undefined) updateData.truck_number = updates.truckNumber || null;
       if (updates.status) updateData.status = updates.status;
 
       const { error } = await supabase.from('drivers')
@@ -650,11 +667,84 @@ export function useDispatcherData() {
     }
   }, [user]);
 
+  // Calendar notes management
+  const addCalendarNote = useCallback(async (note: Omit<CalendarNote, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase.from('calendar_notes').insert({
+        user_id: user.id,
+        date: note.date,
+        note: note.note,
+        is_completed: note.isCompleted,
+      }).select().single();
+
+      if (error) throw error;
+
+      if (data) {
+        setCalendarNotes(prev => [...prev, {
+          id: data.id,
+          date: data.date,
+          note: data.note,
+          isCompleted: data.is_completed,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        }]);
+        toast.success('Note added successfully');
+      }
+    } catch (error) {
+      console.error('Error adding note:', error);
+      toast.error('Failed to add note');
+    }
+  }, [user]);
+
+  const updateCalendarNote = useCallback(async (id: string, updates: Partial<CalendarNote>) => {
+    if (!user) return;
+
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (updates.date) updateData.date = updates.date;
+      if (updates.note !== undefined) updateData.note = updates.note;
+      if (updates.isCompleted !== undefined) updateData.is_completed = updates.isCompleted;
+
+      const { error } = await supabase.from('calendar_notes')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setCalendarNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n));
+      toast.success('Note updated');
+    } catch (error) {
+      console.error('Error updating note:', error);
+      toast.error('Failed to update note');
+    }
+  }, [user]);
+
+  const deleteCalendarNote = useCallback(async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase.from('calendar_notes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setCalendarNotes(prev => prev.filter(n => n.id !== id));
+      toast.success('Note deleted');
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      toast.error('Failed to delete note');
+    }
+  }, [user]);
+
   return {
     loads,
     drivers,
     bonuses,
     prebooks,
+    calendarNotes,
     filteredLoads,
     filteredBonuses,
     metrics,
@@ -677,6 +767,9 @@ export function useDispatcherData() {
     addPrebook,
     updatePrebook,
     deletePrebook,
+    addCalendarNote,
+    updateCalendarNote,
+    deleteCalendarNote,
     loadIdExists,
     getFullLoads,
     syncAutomaticBonuses,

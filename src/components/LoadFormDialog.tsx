@@ -319,7 +319,7 @@ export function LoadFormDialog({
               <SelectContent>
                 {activeDrivers.map((driver) => (
                   <SelectItem key={driver.driverId} value={driver.driverId}>
-                    {driver.driverName} ({driver.driverType === 'owner_operator' ? 'OO' : 'CD'})
+                    {driver.truckNumber ? `${driver.truckNumber} - ` : ''}{driver.driverName} ({driver.driverType === 'owner_operator' ? 'OO' : 'CD'})
                   </SelectItem>
                 ))}
               </SelectContent>
