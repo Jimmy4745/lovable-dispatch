@@ -5,17 +5,18 @@ import { TeamDashboard } from '@/components/TeamDashboard';
 import { LoadsTable } from '@/components/LoadsTable';
 import { BonusesPanel } from '@/components/BonusesPanel';
 import { DriversPanel } from '@/components/DriversPanel';
-import { PrebooksPanel } from '@/components/PrebooksPanel';
+import { CalendarNotesPanel } from '@/components/CalendarNotesPanel';
 import { useDispatcherData } from '@/hooks/useDispatcherData';
 import { TabType } from '@/types';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabType>('team');
   const {
+    loads,
     drivers,
     filteredLoads,
     filteredBonuses,
-    prebooks,
+    calendarNotes,
     metrics,
     driverPerformance,
     selectedWeek,
@@ -32,9 +33,9 @@ const Index = () => {
     addDriver,
     updateDriver,
     deleteDriver,
-    addPrebook,
-    updatePrebook,
-    deletePrebook,
+    addCalendarNote,
+    updateCalendarNote,
+    deleteCalendarNote,
     loadIdExists,
     getFullLoads,
   } = useDispatcherData();
@@ -84,6 +85,7 @@ const Index = () => {
           <DriversPanel
             driverPerformance={driverPerformance}
             allDrivers={drivers}
+            allLoads={loads}
             selectedWeek={selectedWeek}
             onWeekChange={setSelectedWeek}
             onAddDriver={addDriver}
@@ -92,12 +94,12 @@ const Index = () => {
           />
         )}
 
-        {activeTab === 'prebooks' && (
-          <PrebooksPanel
-            prebooks={prebooks}
-            onAddPrebook={addPrebook}
-            onUpdatePrebook={updatePrebook}
-            onDeletePrebook={deletePrebook}
+        {activeTab === 'notes' && (
+          <CalendarNotesPanel
+            notes={calendarNotes}
+            onAddNote={addCalendarNote}
+            onUpdateNote={updateCalendarNote}
+            onDeleteNote={deleteCalendarNote}
           />
         )}
       </main>

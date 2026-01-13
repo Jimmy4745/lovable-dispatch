@@ -33,6 +33,7 @@ export function DriverFormDialog({
   const [formData, setFormData] = useState({
     driverName: '',
     driverType: 'company_driver' as DriverType,
+    truckNumber: '',
     status: 'active' as 'active' | 'inactive',
   });
 
@@ -41,12 +42,14 @@ export function DriverFormDialog({
       setFormData({
         driverName: initialData.driverName,
         driverType: initialData.driverType,
+        truckNumber: initialData.truckNumber || '',
         status: initialData.status,
       });
     } else {
       setFormData({
         driverName: '',
         driverType: 'company_driver',
+        truckNumber: '',
         status: 'active',
       });
     }
@@ -54,7 +57,10 @@ export function DriverFormDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      truckNumber: formData.truckNumber || undefined,
+    });
     onClose();
   };
 
@@ -73,6 +79,16 @@ export function DriverFormDialog({
               value={formData.driverName}
               onChange={(e) => setFormData({ ...formData, driverName: e.target.value })}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="truckNumber">Truck Number</Label>
+            <Input
+              id="truckNumber"
+              placeholder="e.g., 0101"
+              value={formData.truckNumber}
+              onChange={(e) => setFormData({ ...formData, truckNumber: e.target.value })}
             />
           </div>
 

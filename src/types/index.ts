@@ -18,8 +18,18 @@ export interface Driver {
   driverId: string;
   driverName: string;
   driverType: DriverType;
+  truckNumber?: string;
   status: 'active' | 'inactive';
   createdAt: string;
+}
+
+export interface CalendarNote {
+  id: string;
+  date: string;
+  note: string;
+  isCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type BonusType = 'automatic' | 'manual';
@@ -71,7 +81,7 @@ export interface DateRange {
   to: Date;
 }
 
-export type TabType = 'team' | 'loads' | 'bonuses' | 'drivers' | 'prebooks';
+export type TabType = 'team' | 'loads' | 'bonuses' | 'drivers' | 'notes';
 
 // Bonus thresholds by driver type
 export const ownerOperatorBonusThresholds = [
