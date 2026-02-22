@@ -80,14 +80,14 @@ export function TeamDashboard({
             value={metrics.fullLoadsGross}
             variant="revenue"
             icon={<Package className="w-4 h-4 text-revenue" />}
-            subValue="1% commission"
+            subValue="CD 1.75% / OO 1%"
           />
           <MetricCard
             label="PARTIAL Loads Gross"
             value={metrics.partialLoadsGross}
             variant="partial"
             icon={<Truck className="w-4 h-4 text-partial" />}
-            subValue="2% commission"
+            subValue="CD 2.5% / OO 2%"
           />
           <MetricCard
             label="Total Gross"
@@ -112,16 +112,18 @@ export function TeamDashboard({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            label="FULL Commission (1%)"
+            label="FULL Commission"
             value={metrics.fullLoadCommission}
             variant="revenue"
             icon={<FileText className="w-4 h-4 text-revenue" />}
+            subValue="CD 1.75% / OO 1%"
           />
           <MetricCard
-            label="PARTIAL Commission (2%)"
+            label="PARTIAL Commission"
             value={metrics.partialLoadCommission}
             variant="partial"
             icon={<FileText className="w-4 h-4 text-partial" />}
+            subValue="CD 2.5% / OO 2%"
           />
           <MetricCard
             label="Total Bonuses"

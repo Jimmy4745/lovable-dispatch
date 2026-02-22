@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Load, Driver, Bonus, DateRange, WeekRange, DriverType, Prebook, CalendarNote, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
+import { Load, Driver, Bonus, DateRange, WeekRange, DriverType, Prebook, CalendarNote } from '@/types';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -157,20 +157,12 @@ export function useDispatcherData() {
     return { start: weekStart, end: weekEnd };
   }, []);
 
-  // Calculate bonuses for each driver based on their type
-  const calculateDriverBonus = useCallback((totalGross: number, driverType: DriverType) => {
-    const thresholds = driverType === 'owner_operator' 
-      ? ownerOperatorBonusThresholds 
-      : companyDriverBonusThresholds;
-    
-    const eligibleBonus = thresholds
-      .filter((t) => totalGross >= t.threshold)
-      .pop();
-    
-    return {
-      bonusAmount: eligibleBonus?.bonus || 0,
-      bonusThreshold: eligibleBonus?.threshold || 0,
-    };
+  // Commission rates by driver type
+  const getCommissionRates = useCallback((driverType: DriverType) => {
+    if (driverType === 'company_driver') {
+      return { fullRate: 0.0175, partialRate: 0.025 };
+    }
+    return { fullRate: 0.01, partialRate: 0.02 };
   }, []);
 
   // Calculate driver performance with bonuses based on loads within the week (Monday -> next Monday)
@@ -194,17 +186,13 @@ export function useDispatcherData() {
       const totalGross = driverLoads.reduce((sum, l) => sum + l.rate, 0);
       const loadCount = driverLoads.length;
       
-      const { bonusAmount, bonusThreshold } = calculateDriverBonus(totalGross, driver.driverType);
-      
       return {
         ...driver,
         totalGross,
         loadCount,
-        bonusAmount,
-        bonusThreshold,
       };
     });
-  }, [drivers, calculateDriverBonus, getWeekRange]);
+  }, [drivers, getWeekRange]);
 
   const metrics = useMemo(() => {
     const fullLoadsGross = filteredLoads
@@ -219,8 +207,27 @@ export function useDispatcherData() {
     
     const totalBonuses = filteredBonuses.reduce((sum, b) => sum + b.amount, 0);
     
-    const fullLoadCommission = fullLoadsGross * 0.01;
-    const partialLoadCommission = partialLoadsGross * 0.02;
+    // Calculate commission per load based on driver type
+    let cdFullGross = 0, cdPartialGross = 0, ooFullGross = 0, ooPartialGross = 0;
+    filteredLoads.forEach(load => {
+      const driver = drivers.find(d => d.driverId === load.driverId);
+      const driverType = driver?.driverType || 'company_driver';
+      if (load.loadType === 'FULL') {
+        if (driverType === 'company_driver') cdFullGross += load.rate;
+        else ooFullGross += load.rate;
+      } else {
+        if (driverType === 'company_driver') cdPartialGross += load.rate;
+        else ooPartialGross += load.rate;
+      }
+    });
+
+    const cdFullCommission = cdFullGross * 0.0175;
+    const cdPartialCommission = cdPartialGross * 0.025;
+    const ooFullCommission = ooFullGross * 0.01;
+    const ooPartialCommission = ooPartialGross * 0.02;
+
+    const fullLoadCommission = cdFullCommission + ooFullCommission;
+    const partialLoadCommission = cdPartialCommission + ooPartialCommission;
     const totalSalary = fullLoadCommission + partialLoadCommission + totalBonuses;
 
     return {
@@ -233,115 +240,12 @@ export function useDispatcherData() {
       totalSalary,
       loadCount: filteredLoads.length,
     };
-  }, [filteredLoads, filteredBonuses]);
+  }, [filteredLoads, filteredBonuses, drivers]);
 
   const driverPerformance = useMemo(() => {
     return calculateDriverPerformanceFromLoads(loads, activePeriod.start);
   }, [loads, activePeriod.start, calculateDriverPerformanceFromLoads]);
 
-  // Sync automatic bonuses - now with immediate calculation
-  const syncAutomaticBonuses = useCallback(async (updatedLoads?: Load[]) => {
-    if (!user) return;
-
-    const currentLoads = updatedLoads || loads;
-    const weekStart = format(selectedWeek.start, 'yyyy-MM-dd');
-    const bonusDate = weekStart;
-    
-    // Calculate driver performance with the current/updated loads for the selected week
-    const currentPerformance = calculateDriverPerformanceFromLoads(currentLoads, selectedWeek.start);
-    
-    // Calculate what automatic bonuses should exist
-    const newAutoBonuses = currentPerformance
-      .filter((driver) => driver.bonusAmount > 0)
-      .map((driver) => ({
-        driverId: driver.driverId,
-        bonusType: 'automatic' as const,
-        amount: driver.bonusAmount,
-        week: weekStart,
-        date: bonusDate,
-        note: `Weekly bonus for $${driver.totalGross.toLocaleString()} gross (${driver.driverType === 'owner_operator' ? 'Owner Operator' : 'Company Driver'})`,
-      }));
-
-    // Get existing automatic bonuses for this week
-    const existingAutoForWeek = bonuses.filter(
-      b => b.bonusType === 'automatic' && b.week === weekStart
-    );
-
-    // Determine bonuses to add, update, or keep
-    for (const newBonus of newAutoBonuses) {
-      const existing = existingAutoForWeek.find(b => b.driverId === newBonus.driverId);
-      
-      if (!existing) {
-        // Add new bonus
-        try {
-          const { data, error } = await supabase.from('bonuses').insert({
-            user_id: user.id,
-            driver_id: newBonus.driverId,
-            bonus_type: newBonus.bonusType,
-            amount: newBonus.amount,
-            week_start: newBonus.week,
-            date: newBonus.date,
-            note: newBonus.note,
-          }).select().single();
-
-          if (error) throw error;
-          
-          if (data) {
-            setBonuses(prev => [...prev, {
-              bonusId: data.id,
-              driverId: data.driver_id || undefined,
-              bonusType: data.bonus_type,
-              amount: Number(data.amount),
-              week: data.week_start,
-              date: data.date,
-              note: data.note || '',
-              createdAt: data.created_at,
-            }]);
-          }
-        } catch (error) {
-          console.error('Error adding automatic bonus:', error);
-        }
-      } else if (existing.amount !== newBonus.amount) {
-        // Update existing bonus if amount changed
-        try {
-          const { error } = await supabase.from('bonuses')
-            .update({ 
-              amount: newBonus.amount, 
-              note: newBonus.note 
-            })
-            .eq('id', existing.bonusId);
-
-          if (error) throw error;
-          
-          setBonuses(prev => prev.map(b => 
-            b.bonusId === existing.bonusId 
-              ? { ...b, amount: newBonus.amount, note: newBonus.note }
-              : b
-          ));
-        } catch (error) {
-          console.error('Error updating automatic bonus:', error);
-        }
-      }
-    }
-
-    // Remove automatic bonuses for drivers who no longer qualify
-    const driversWithNewBonuses = new Set(newAutoBonuses.map(b => b.driverId));
-    for (const existing of existingAutoForWeek) {
-      if (existing.driverId && !driversWithNewBonuses.has(existing.driverId)) {
-        try {
-          const { error } = await supabase.from('bonuses')
-            .delete()
-            .eq('id', existing.bonusId);
-
-          if (error) throw error;
-          
-          setBonuses(prev => prev.filter(b => b.bonusId !== existing.bonusId));
-        } catch (error) {
-          console.error('Error removing automatic bonus:', error);
-        }
-      }
-    }
-  }, [user, loads, bonuses, selectedWeek, calculateDriverPerformanceFromLoads]);
 
   // Check if load ID already exists
   const loadIdExists = useCallback((loadId: string, excludeLoadId?: string) => {
@@ -386,13 +290,7 @@ export function useDispatcherData() {
           createdAt: data.created_at,
         };
         
-        // Update loads state and immediately sync bonuses with the new loads array
-        setLoads(prev => {
-          const updatedLoads = [...prev, newLoad];
-          // Sync bonuses immediately with updated loads
-          syncAutomaticBonuses(updatedLoads);
-          return updatedLoads;
-        });
+        setLoads(prev => [...prev, newLoad]);
         
         toast.success('Load added successfully');
       }
@@ -400,7 +298,7 @@ export function useDispatcherData() {
       console.error('Error adding load:', error);
       toast.error('Failed to add load');
     }
-  }, [user, syncAutomaticBonuses]);
+  }, [user]);
 
   const updateLoad = useCallback(async (loadId: string, updates: Partial<Load>) => {
     if (!user) return;
@@ -423,19 +321,14 @@ export function useDispatcherData() {
 
       if (error) throw error;
 
-      setLoads(prev => {
-        const updatedLoads = prev.map(l => l.loadId === loadId ? { ...l, ...updates } : l);
-        // Sync bonuses immediately with updated loads
-        syncAutomaticBonuses(updatedLoads);
-        return updatedLoads;
-      });
+      setLoads(prev => prev.map(l => l.loadId === loadId ? { ...l, ...updates } : l));
       
       toast.success('Load updated successfully');
     } catch (error) {
       console.error('Error updating load:', error);
       toast.error('Failed to update load');
     }
-  }, [user, syncAutomaticBonuses]);
+  }, [user]);
 
   const deleteLoad = useCallback(async (loadId: string) => {
     if (!user) return;
@@ -448,19 +341,14 @@ export function useDispatcherData() {
 
       if (error) throw error;
 
-      setLoads(prev => {
-        const updatedLoads = prev.filter(l => l.loadId !== loadId);
-        // Sync bonuses immediately with updated loads
-        syncAutomaticBonuses(updatedLoads);
-        return updatedLoads;
-      });
+      setLoads(prev => prev.filter(l => l.loadId !== loadId));
       
       toast.success('Load deleted successfully');
     } catch (error) {
       console.error('Error deleting load:', error);
       toast.error('Failed to delete load');
     }
-  }, [user, syncAutomaticBonuses]);
+  }, [user]);
 
   const addBonus = useCallback(async (bonus: Omit<Bonus, 'bonusId' | 'createdAt'>) => {
     if (!user) return;
@@ -772,7 +660,6 @@ export function useDispatcherData() {
     deleteCalendarNote,
     loadIdExists,
     getFullLoads,
-    syncAutomaticBonuses,
     isLoading,
   };
 }
