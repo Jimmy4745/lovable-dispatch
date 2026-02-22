@@ -75,7 +75,6 @@ const Index = () => {
           <BonusesPanel
             bonuses={filteredBonuses}
             drivers={drivers}
-            driverPerformance={driverPerformance}
             onAddBonus={addBonus}
             onDeleteBonus={deleteBonus}
           />

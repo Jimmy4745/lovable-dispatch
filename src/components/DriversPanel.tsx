@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { WeekPicker } from './WeekPicker';
 import { WeeklyGrossTable } from './WeeklyGrossTable';
-import { Driver, Load, WeekRange, ownerOperatorBonusThresholds, companyDriverBonusThresholds } from '@/types';
-import { TrendingUp, Award, AlertCircle, Plus, Pencil, Trash2, Truck, User } from 'lucide-react';
+import { Driver, Load, WeekRange } from '@/types';
+import { TrendingUp, Plus, Pencil, Trash2, Truck, User, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DriverFormDialog } from './DriverFormDialog';
 import {
@@ -24,8 +24,6 @@ interface DriversPanelProps {
     truckNumber?: string;
     totalGross: number;
     loadCount: number;
-    bonusAmount: number;
-    bonusThreshold: number;
     status: 'active' | 'inactive';
   }[];
   allDrivers: Driver[];
@@ -56,13 +54,6 @@ export function DriversPanel({
     driverPerformance[0]
   );
 
-  const getNextThreshold = (gross: number, driverType: 'company_driver' | 'owner_operator') => {
-    const thresholds = driverType === 'owner_operator' 
-      ? ownerOperatorBonusThresholds 
-      : companyDriverBonusThresholds;
-    const nextTier = thresholds.find((t) => t.threshold > gross);
-    return nextTier || thresholds[thresholds.length - 1];
-  };
 
   const companyDrivers = allDrivers.filter((d) => d.driverType === 'company_driver');
   const ownerOperators = allDrivers.filter((d) => d.driverType === 'owner_operator');
@@ -216,115 +207,36 @@ export function DriversPanel({
               <th>Type</th>
               <th className="text-center">Loads</th>
               <th className="text-right">Total Gross</th>
-              <th className="text-right">Bonus Status</th>
-              <th className="text-right">Next Tier</th>
             </tr>
           </thead>
           <tbody>
-            {driverPerformance.map((driver) => {
-              const nextTier = getNextThreshold(driver.totalGross, driver.driverType);
-              const toNextTier = nextTier.threshold - driver.totalGross;
-              const progressToNext = driver.bonusThreshold > 0 
-                ? Math.min(100, ((driver.totalGross - driver.bonusThreshold) / (nextTier.threshold - driver.bonusThreshold)) * 100)
-                : Math.min(100, (driver.totalGross / nextTier.threshold) * 100);
-
-              return (
-                <tr key={driver.driverId}>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary">
-                          {driver.driverName.charAt(0)}
-                        </span>
-                      </div>
-                      <span className="font-medium">{driver.driverName}</span>
+            {driverPerformance.map((driver) => (
+              <tr key={driver.driverId}>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-medium text-primary">
+                        {driver.driverName.charAt(0)}
+                      </span>
                     </div>
-                  </td>
-                  <td>
-                    <span className={driver.driverType === 'owner_operator' ? 'badge-partial' : 'badge-full'}>
-                      {driver.driverType === 'owner_operator' ? 'Owner Op' : 'Company'}
-                    </span>
-                  </td>
-                  <td className="text-center">{driver.loadCount}</td>
-                  <td className="text-right">
-                    <span className={`font-bold ${driver.totalGross >= 10000 ? 'text-revenue' : ''}`}>
-                      ${driver.totalGross.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="text-right">
-                    {driver.bonusAmount > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 text-revenue font-medium">
-                        <TrendingUp className="w-4 h-4" />
-                        ${driver.bonusAmount}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground flex items-center justify-end gap-1.5">
-                        <AlertCircle className="w-4 h-4" />
-                        Not eligible
-                      </span>
-                    )}
-                  </td>
-                  <td className="text-right">
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-sm">
-                        ${nextTier.bonus} @ ${nextTier.threshold.toLocaleString()}
-                      </span>
-                      {toNextTier > 0 && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-revenue rounded-full transition-all"
-                              style={{ width: `${Math.max(0, progressToNext)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            ${toNextTier.toLocaleString()} to go
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                    <span className="font-medium">{driver.driverName}</span>
+                  </div>
+                </td>
+                <td>
+                  <span className={driver.driverType === 'owner_operator' ? 'badge-partial' : 'badge-full'}>
+                    {driver.driverType === 'owner_operator' ? 'Owner Op' : 'Company'}
+                  </span>
+                </td>
+                <td className="text-center">{driver.loadCount}</td>
+                <td className="text-right">
+                  <span className={`font-bold ${driver.totalGross >= 10000 ? 'text-revenue' : ''}`}>
+                    ${driver.totalGross.toLocaleString()}
+                  </span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
-      </div>
-
-      {/* Bonus Thresholds Reference */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-lg border border-border p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <Truck className="w-4 h-4 text-revenue" />
-            Company Driver Bonuses
-          </h4>
-          <div className="flex flex-wrap gap-3">
-            {companyDriverBonusThresholds.map((t) => (
-              <div key={t.threshold} className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">
-                  ${(t.threshold / 1000)}k+
-                </span>
-                <span className="font-medium text-revenue">${t.bonus}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-card rounded-lg border border-border p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <User className="w-4 h-4 text-partial" />
-            Owner Operator Bonuses
-          </h4>
-          <div className="flex flex-wrap gap-3">
-            {ownerOperatorBonusThresholds.map((t) => (
-              <div key={t.threshold} className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">
-                  ${(t.threshold / 1000)}k+
-                </span>
-                <span className="font-medium text-partial">${t.bonus}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <DriverFormDialog

@@ -83,18 +83,8 @@ export interface DateRange {
 
 export type TabType = 'team' | 'loads' | 'bonuses' | 'drivers' | 'notes';
 
-// Bonus thresholds by driver type
-export const ownerOperatorBonusThresholds = [
-  { threshold: 13000, bonus: 50 },
-  { threshold: 14000, bonus: 75 },
-  { threshold: 15000, bonus: 100 },
-];
-
-export const companyDriverBonusThresholds = [
-  { threshold: 10000, bonus: 30 },
-  { threshold: 11000, bonus: 50 },
-  { threshold: 12000, bonus: 70 },
-  { threshold: 13000, bonus: 90 },
-  { threshold: 14000, bonus: 110 },
-  { threshold: 15000, bonus: 150 },
-];
+// Commission rates by driver type
+export const commissionRates = {
+  company_driver: { fullRate: 0.0175, partialRate: 0.025 },
+  owner_operator: { fullRate: 0.01, partialRate: 0.02 },
+};
